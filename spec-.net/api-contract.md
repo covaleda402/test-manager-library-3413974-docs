@@ -80,7 +80,11 @@ implemente en Python o .NET. Qué hace cada operación está en [`spec.md`](spec
 
 | Método | Ruta | Rol | Descripción |
 |---|---|---|---|
+| GET | `/users` | admin | Lista bibliotecarios activos |
 | POST | `/users` | admin | Crea un bibliotecario |
+| DELETE | `/users/{id}` | admin | Da de baja un bibliotecario (si no tiene préstamos históricos) |
+
+`POST /users`
 
 ```json
 // petición  (role solo admite "librarian")
@@ -88,6 +92,19 @@ implemente en Python o .NET. Qué hace cada operación está en [`spec.md`](spec
 // 201  (sin password ni password_hash)
 { "id": "…", "username": "ana", "role": "librarian" }
 ```
+
+`GET /users`
+
+```json
+// 200
+{
+  "items": [
+    { "id": "…", "username": "ana", "role": "librarian" }
+  ]
+}
+```
+
+`DELETE /users/{id}`: Responde `204 No Content` si se elimina con éxito. Si es un administrador responde `403 FORBIDDEN_ROLE`. Si el bibliotecario tiene préstamos asociados en el histórico (`library.loan`), responde `409 FORBIDDEN_OPERATION` para preservar la integridad referencial. Si no existe, `404 NOT_FOUND`.
 
 ### 3.3 Categorías
 
@@ -104,7 +121,7 @@ implemente en Python o .NET. Qué hace cada operación está en [`spec.md`](spec
 | POST | `/books` | admin | Crea |
 | PUT | `/books/{id}` | admin | Reemplaza título, autor, categoría y total |
 | DELETE | `/books/{id}` | admin | Baja lógica |
-| PUT | `/books/{id}/cover` | admin | Sube portada (`multipart/form-data`, campo `file`) |
+| PUT / POST | `/books/{id}/cover` | admin | Sube portada (`multipart/form-data`, campo `file`; compatible vía PUT directo o POST con `_method=PUT`) |
 | DELETE | `/books/{id}/cover` | admin | Quita la portada |
 
 Libro (respuesta):
@@ -118,7 +135,7 @@ Libro (respuesta):
 ```
 
 `POST /books` (petición): `title`, `author`, `isbn`, `category_id`, `total_copies`. Los disponibles los calcula el servidor.
-`cover_key` es una clave opaca: para pintar la portada se usa `GET /books/{id}/cover`, que devuelve el binario o 404.
+`cover_key` es una clave opaca: para pintar la portada se usa `GET /books/{id}/cover`, que devuelve el binario o 404. Soporta envío mediante `PUT` o `POST` con *method override* para interoperabilidad con motores PHP/FastCGI en subidas `multipart/form-data`.
 
 ### 3.5 Socios
 
@@ -134,7 +151,7 @@ Libro (respuesta):
 |---|---|---|---|
 | POST | `/loans` | admin, librarian | Registra un préstamo |
 | GET | `/loans` | admin, librarian | Lista: `from`, `to`, `status`, `member_id`, `page`, `size` |
-| GET | `/loans/{id}` | admin, librarian | Detalle con líneas y estado |
+| GET | `/loans/{id}` | admin, librarian | Detalle con líneas, socio y estado |
 | POST | `/loans/{loan_id}/items/{item_id}/return` | admin, librarian | Devuelve una línea |
 | GET | `/loans/overdue` | admin, librarian | Líneas vencidas |
 
@@ -143,9 +160,18 @@ Libro (respuesta):
 ```json
 // petición  (1 a 3 elementos, sin libros repetidos)
 { "member_id": "…", "items": [ { "book_id": "…" }, { "book_id": "…" } ] }
-// 201
+// 201 (incluye datos y resumen del socio para trazabilidad y presentación)
 {
-  "id": "…", "member_id": "…", "loaned_at": "2026-10-14T14:15:00Z", "status": "open",
+  "id": "…",
+  "member_id": "…",
+  "member_name": "Ana Gómez",
+  "member": {
+    "id": "…",
+    "full_name": "Ana Gómez",
+    "document_number": "100200300"
+  },
+  "loaned_at": "2026-10-14T14:15:00Z",
+  "status": "open",
   "items": [
     { "id": "…", "book_id": "…", "book_title": "Cien años de soledad", "isbn": "9780307474728",
       "category_name": "Novela", "due_at": "2026-10-28T14:15:00Z", "returned_at": null }
@@ -153,7 +179,7 @@ Libro (respuesta):
 }
 ```
 
-`status` es calculado: `open` (hay líneas sin devolver y ninguna vencida), `overdue` (alguna sin devolver y vencida), `closed` (todas devueltas).
+`status` es calculado: `open` (hay líneas sin devolver y ninguna vencida), `overdue` (alguna sin devolver y vencida), `closed` (todas devueltas). Tanto `GET /loans` como `GET /loans/{id}` devuelven `member_name` y el objeto `member` para rápida visualización en la interfaz.
 
 `POST /loans/{loan_id}/items/{item_id}/return` → 200 con la línea (`returned_at` lleno).
 

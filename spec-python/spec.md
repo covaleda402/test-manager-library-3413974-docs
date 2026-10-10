@@ -34,16 +34,18 @@ Como usuario quiero autenticarme para operar según mi rol.
 - **CA-01.2** Con credenciales inválidas responde 401 con un mensaje que **no** dice si falló el usuario o la clave.
 - **CA-01.3** Todo endpoint salvo el inicio de sesión y `/health` exige token. Sin token: 401. Rol insuficiente: 403.
 
-### HU-02 · Dar de alta bibliotecarios (admin)
+### HU-02 · Gestionar bibliotecarios (admin)
 - **CA-02.1** El admin crea un usuario con nombre, clave y rol `librarian`.
 - **CA-02.2** El nombre de usuario se guarda en minúsculas y recortado; es único. Repetido: 409.
 - **CA-02.3** Pedir el rol `admin` por la API responde 422. La clave nunca se devuelve ni se registra en logs.
+- **CA-02.4** El admin puede listar los bibliotecarios registrados.
+- **CA-02.5** El admin puede dar de baja a un bibliotecario si no tiene préstamos históricos asociados. Si tiene préstamos registrados en el histórico, responde 409 (`FORBIDDEN_OPERATION`) para proteger la integridad referencial. Un admin nunca se puede eliminar (403).
 
 ### HU-03 · Gestionar libros (admin)
 - **CA-03.1** Crear libro con título, autor, ISBN, categoría y total de ejemplares. Los disponibles arrancan iguales al total.
 - **CA-03.2** El ISBN tiene 13 dígitos y es único entre libros activos. Repetido: 409.
 - **CA-03.3** Total de ejemplares ≥ 1. Cambiar el total ajusta los disponibles en la misma diferencia y **nunca** deja disponibles < 0 (422).
-- **CA-03.4** Subir portada (JPG/PNG, máx. 2 MB) guarda una **clave opaca**; sin portada el campo es `null`, nunca cadena vacía.
+- **CA-03.4** Subir portada (JPG/PNG, máx. 2 MB) guarda una **clave opaca**; sin portada el campo es `null`, nunca cadena vacía. Soporta multipart estándar.
 - **CA-03.5** Eliminar un libro es **baja lógica**: deja de aparecer en el catálogo pero sigue en los préstamos pasados. Un libro con préstamos abiertos no se da de baja (409).
 
 ### HU-04 · Buscar libros
@@ -72,9 +74,10 @@ Como usuario quiero autenticarme para operar según mi rol.
 - **CA-07.4** Cuando todas las líneas están devueltas, el préstamo figura como **cerrado**.
 
 ### HU-08 · Ver un préstamo y listar préstamos
-- **CA-08.1** Consultar un préstamo trae sus líneas y su estado calculado (`open`, `overdue`, `closed`).
+- **CA-08.1** Consultar un préstamo trae sus líneas, datos del socio solicitante (`member_name`, documento) y su estado calculado (`open`, `overdue`, `closed`).
 - **CA-08.2** Listar por rango de fechas, estado y socio, orden por fecha descendente, paginado.
 - **CA-08.3** El estado **se calcula**, no se almacena.
+- **CA-08.4** En la interfaz y el listado se identifica de forma directa el socio asignado al préstamo.
 
 ### HU-09 · Libros vencidos
 - **CA-09.1** Lista las líneas sin devolver con `due_at` anterior a ahora: libro, socio, días de retraso.

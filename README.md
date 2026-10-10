@@ -70,3 +70,13 @@ En cualquiera de las dos carpetas, en este orden:
 | [`test-manager-library-3413974-page`](https://github.com/code-sena/test-manager-library-3413974-page) | Sitio público estático de presentación |
 | [`test-manager-library-3413974-infra`](https://github.com/code-sena/test-manager-library-3413974-infra) | Contenedores, red, volúmenes y motor de base de datos vacío |
 | [`test-manager-library-3413974-tool`](https://github.com/code-sena/test-manager-library-3413974-tool) | Utilidades: sembrador de datos de demostración |
+
+---
+
+## Decisiones y Extensiones Registradas (ADR-005)
+
+Durante la implementación sobre el stack oficial (**React + Laravel 11**), se documentaron las siguientes decisiones de ingeniería alineadas con la Constitución y el Contrato:
+1. **Gestión y Baja de Bibliotecarios (`GET /users` y `DELETE /users/{id}`):** Se habilita el listado y eliminación segura para administradores, protegiendo la integridad referencial (`ON DELETE RESTRICT` de FK-5) ante bibliotecarios con préstamos en el histórico (`409 FORBIDDEN_OPERATION`).
+2. **Compatibilidad Multipart en Portadas (`PUT/POST /books/{id}/cover`):** Admisión de *method spoofing* (`_method: PUT`) para resolver la limitación de streams multipart en servidores PHP sin romper el contrato REST.
+3. **Visibilidad del Socio en Préstamos:** Inclusión del nombre y datos del socio solicitante en las respuestas de préstamos para presentación directa en interfaz de usuario.
+
